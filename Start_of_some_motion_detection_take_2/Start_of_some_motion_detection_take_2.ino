@@ -331,6 +331,14 @@ int dst_end_week = 1;
 int dst_end_dow = 0;
 int dst_end_hour = 2;
 
+/* The RTC will return the following data in INT
+YYYY/MM/DD HH:MM:SS DayOfWeek
+
+Day of week will be 0 - 6
+0 = Sunday - 6 = Saturday
+
+*/
+
 
 int in_DST(){
   if(rtc_month >= dst_start_month && rtc_month <= dst_end_month){
