@@ -21,7 +21,7 @@ RTC_DS1307 RTC;
 // Global Variables
 
 // This is the last time the lights were told to turn on.
-int last_time;
+long last_time;
 
 int timeout = 15;
 
@@ -47,7 +47,7 @@ int rtc_dayOfWeek = 0;
 int rtc_hour = 0;
 int rtc_minute = 0;
 int rtc_second = 0;
-int rtc_unixtime = 0;
+long rtc_unixtime = 0;
 
 
 
@@ -92,6 +92,8 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   // Read in the current time
+  //delay (500);
+  Serial.println("---------------------");
   DateTime rtc_now = RTC.now();
   
   rtc_year = rtc_now.year();
@@ -103,10 +105,10 @@ void loop() {
   rtc_second = rtc_now.second();
   rtc_unixtime = rtc_now.unixtime();
 
-  if(in_DST() == 1){
+  if(in_DST2() == 1){
     rtc_hour = rtc_hour + 1;
   }
-  
+  Serial.print("RTC Date: ");
   Serial.print(rtc_now.month());
   Serial.print("-");
   Serial.print(rtc_now.day());
@@ -119,10 +121,13 @@ void loop() {
   Serial.print(rtc_now.minute());
   Serial.print(":");
   Serial.println(rtc_now.second());
-  int test = in_DST();
-  Serial.print("IN DST?: ");
   
-  Serial.println(test);
+  Serial.print("DST Date: ");
+  Serial.print(rtc_month);
+  Serial.print("-");
+  Serial.print(rtc_day);
+  Serial.print("-");
+  Serial.println(rtc_year);
   
   Serial.print("DST Time: ");
   Serial.print(rtc_hour);
@@ -322,7 +327,7 @@ int read_pot(){
 
 // DST Settings
 int dst_start_month = 3;
-int dst_start_week = 2;
+int dst_start_week = 1;
 int dst_start_dow = 0;
 int dst_start_hour = 2;
 
@@ -345,6 +350,9 @@ int in_DST(){
     Serial.println("inside Month");
     if((rtc_day > (dst_start_week * 7) - 7 && rtc_day <= dst_start_week * 7) && (rtc_day > (dst_end_week * 7) - 7 && rtc_day <= dst_end_week * 7)){
       Serial.println("inside Week");
+      Serial.println(rtc_dayOfWeek);
+      Serial.println(dst_start_dow);
+      Serial.println(dst_end_dow);
       if(rtc_dayOfWeek >= dst_start_dow && rtc_dayOfWeek <= dst_end_dow){
         Serial.println("inside DOW");
         Serial.println(rtc_hour);
@@ -393,4 +401,34 @@ int in_DST1(){
   else{
     return 0;
   }
+}
+
+
+int in_DST2(){
+  /* So for this attempt What I am going to do is this
+      Figure out the Unix time for NOW.
+      Figure out what the Unix time for the Start would be.
+        - Create a Date Time Object with the future date
+        - Figure out the Date of the specified Week / Day.
+          (What is the date of The Second Sunday of March)
+      Figure out with the Unix time for the End would be.
+        - Same as Start
+        */
+  long dst_start_unix = 0;
+  long dst_end_unix = 2;
+  
+  Serial.print("Current Unix Time: ");
+  Serial.println(rtc_unixtime);
+  Serial.print("DST Start Unix Time: ");
+  Serial.println(dst_start_unix);
+  Serial.print("DST End Unix Time: ");
+  Serial.println(dst_end_unix);
+  
+  if(dst_start_unix < rtc_unixtime && rtc_unixtime <= dst_end_unix){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+  
 }
