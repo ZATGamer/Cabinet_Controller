@@ -55,7 +55,7 @@ void setup() {
   // Setting up the Real Time Clock
   Wire.begin();
   RTC.begin();
-  //Serial.begin(9600);
+  Serial.begin(9600);
  
   // Setting Pin Modes
   pinMode(PIR, INPUT);
@@ -66,7 +66,7 @@ void setup() {
   pinMode(OVERRIDE, INPUT);
   pinMode(PIR_LED, OUTPUT);
   pinMode(OVERRIDE_LED, OUTPUT);
-  //RTC.adjust(DateTime(2015, 3, 8, 1, 59, 40));
+  RTC.adjust(DateTime(2015, 11, 1, 1, 59, 50));
   //RTC.adjust(DateTime(__DATE__, __TIME__));
   
   digitalWrite(OVERRIDE_LED, LOW);
@@ -105,7 +105,7 @@ void loop() {
   rtc_second = rtc_now.second();
   rtc_unixtime = rtc_now.unixtime();
 
-  if(in_DST2() == 1){
+  if(in_DST() == 1){
     rtc_hour = rtc_hour + 1;
   }
   Serial.print("RTC Date: ");
@@ -336,99 +336,35 @@ int dst_end_week = 1;
 int dst_end_dow = 0;
 int dst_end_hour = 2;
 
-/* The RTC will return the following data in INT
-YYYY/MM/DD HH:MM:SS DayOfWeek
-
-Day of week will be 0 - 6
-0 = Sunday - 6 = Saturday
-
-*/
-
-
 int in_DST(){
-  if(rtc_month >= dst_start_month && rtc_month <= dst_end_month){
-    Serial.println("inside Month");
-    if((rtc_day > (dst_start_week * 7) - 7 && rtc_day <= dst_start_week * 7) && (rtc_day > (dst_end_week * 7) - 7 && rtc_day <= dst_end_week * 7)){
-      Serial.println("inside Week");
-      Serial.println(rtc_dayOfWeek);
-      Serial.println(dst_start_dow);
-      Serial.println(dst_end_dow);
-      if(rtc_dayOfWeek >= dst_start_dow && rtc_dayOfWeek <= dst_end_dow){
-        Serial.println("inside DOW");
-        Serial.println(rtc_hour);
-        Serial.println(dst_start_hour);
-        Serial.println(dst_end_hour);
-        if(rtc_hour >= dst_start_hour && rtc_hour < dst_end_hour){
-          Serial.println("inside hour");
-          // INSIDE DST
-          return 1;
-        }
-        else{
-          return 0;
-        }
-      }
-      else{
-        return 0;
-      }
-    }
-    else{
-      return 0;
-    }
-  }
-  else{
-    return 0;
-  }
-}
+  boolean dst = false; //Assume we're not in DST
 
+  if(rtc_month > dst_start_month && rtc_month < dst_end_month) dst = true; //DST is happening!
 
-int in_DST1(){
-  long current_int_dst_check = (rtc_month * 100000) + (rtc_day * 1000) + (rtc_dayOfWeek * 100) + rtc_hour;
-  Serial.print("current dst int");
-  Serial.println(current_int_dst_check);
-  long start_int_dst_check = (dst_start_month * 100000) + (dst_start_week * 1000) + (dst_start_dow * 100) + dst_start_hour;
-  Serial.print("start dst int");
-  Serial.println(start_int_dst_check);
-  long end_int_dst_check = (dst_end_month * 100000) + (dst_end_week * 1000) + (dst_end_dow * 100) + dst_end_hour;
-  Serial.print("end dst int");
-  Serial.println(end_int_dst_check);
-  long current_int_time_test = (12 * 100000) + (31 * 1000) + (6 * 100) + 23;
-  Serial.print("test dst int");
-  Serial.println(current_int_time_test);
+//  byte DoW = day_of_week(rtc_year, rtc_month, rtc_day); //Get the day of the week. 0 = Sunday, 6 = Saturday
+
+  //In March, we are DST if our previous Sunday was on or after the 8th.
+  int previousSunday = rtc_day - rtc_dayOfWeek;
   
-  if(current_int_dst_check >= start_int_dst_check && current_int_dst_check < end_int_dst_check){
-    return 1;
-  }
-  else{
-    return 0;
-  }
-}
-
-
-int in_DST2(){
-  /* So for this attempt What I am going to do is this
-      Figure out the Unix time for NOW.
-      Figure out what the Unix time for the Start would be.
-        - Create a Date Time Object with the future date
-        - Figure out the Date of the specified Week / Day.
-          (What is the date of The Second Sunday of March)
-      Figure out with the Unix time for the End would be.
-        - Same as Start
-        */
-  long dst_start_unix = 0;
-  long dst_end_unix = 2;
+  // Calculating the start and end weeks.
+  int start_week = (dst_start_week * 7) - 7;
+  int end_week = (dst_end_week * 7) - 7;
   
-  Serial.print("Current Unix Time: ");
-  Serial.println(rtc_unixtime);
-  Serial.print("DST Start Unix Time: ");
-  Serial.println(dst_start_unix);
-  Serial.print("DST End Unix Time: ");
-  Serial.println(dst_end_unix);
-  
-  if(dst_start_unix < rtc_unixtime && rtc_unixtime <= dst_end_unix){
-    return 1;
-  }
-  else{
-    return 0;
+  if (rtc_month == dst_start_month)
+  {
+    if(previousSunday > start_week) dst = true; 
+  } 
+
+  //In November we must be before the first Sunday to be dst.
+  //That means the previous Sunday must be before the 1st.
+  if(rtc_month == dst_end_month)
+  {
+    if(previousSunday <= end_week) dst = true;
   }
   
+  if (rtc_month == dst_start_month && rtc_dayOfWeek == dst_start_dow && rtc_hour < dst_start_hour) dst = false;
+  if (rtc_month == dst_end_month && rtc_dayOfWeek == dst_end_dow && rtc_hour < dst_end_hour) dst = true;
+  
+  if(dst == true) return 1;
+  else return 0;
 }
