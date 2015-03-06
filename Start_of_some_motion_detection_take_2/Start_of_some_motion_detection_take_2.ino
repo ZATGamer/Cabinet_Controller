@@ -66,7 +66,7 @@ int rtc_minute = 0;
 int rtc_second = 0;
 long rtc_unixtime = 0;
 
-
+void lcdprintTime(int HH, int MM, int SS, int b = 0);
 
 void setup() {  
   // Setting up the Real Time Clock
@@ -187,10 +187,10 @@ void loop() {
         if(rtc_second > 45 && rtc_second < 48) lcdprintDate2(rtc_month, rtc_day);
         if(rtc_second == 48) wipeLeft(), lcdPrintYear(rtc_year);
         if(rtc_second > 48 && rtc_second < 52) lcdPrintYear(rtc_year);
-        if(rtc_second == 52) wipeLeft(), lcdprintTime_OLD(rtc_hour, rtc_minute, rtc_second);
+        if(rtc_second == 52) wipeLeft(), lcdprintTime(rtc_hour, rtc_minute, rtc_second);
       }
       else{
-        lcdprintTime_OLD(rtc_hour, rtc_minute, rtc_second);
+        lcdprintTime(rtc_hour, rtc_minute, rtc_second);
       }
   }
   

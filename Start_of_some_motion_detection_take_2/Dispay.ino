@@ -34,7 +34,7 @@ void lcdprintTime_OLD(int HH, int MM, int SS){
 
 
 // CHANGED THIS
-void lcdprintTime(int HH, int MM, int SS, int b = 0){
+void lcdprintTime(int HH, int MM, int SS, int b){
   cursorStart();
   if(b == 1){
     if(SS % 2 == 0){
