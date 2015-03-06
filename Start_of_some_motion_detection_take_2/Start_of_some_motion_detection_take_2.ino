@@ -67,6 +67,8 @@ int rtc_second = 0;
 long rtc_unixtime = 0;
 
 void lcdprintTime(int HH, int MM, int SS, int b = 0);
+void lcdprintDate(int MONTH, int DAY, int SS = 0, int b = 0);
+void lcdprintYear(int YEAR, int SS = 0, int b = 0);
 
 void setup() {  
   // Setting up the Real Time Clock
@@ -183,10 +185,10 @@ void loop() {
   
     // Display Date with Transitions. 
       if(rtc_second >= 45 && rtc_second <= 52){
-        if(rtc_second == 45) wipeLeft(), lcdprintDate2(rtc_month, rtc_day);
-        if(rtc_second > 45 && rtc_second < 48) lcdprintDate2(rtc_month, rtc_day);
-        if(rtc_second == 48) wipeLeft(), lcdPrintYear(rtc_year);
-        if(rtc_second > 48 && rtc_second < 52) lcdPrintYear(rtc_year);
+        if(rtc_second == 45) wipeLeft(), lcdprintDate(rtc_month, rtc_day);
+        if(rtc_second > 45 && rtc_second < 48) lcdprintDate(rtc_month, rtc_day);
+        if(rtc_second == 48) wipeLeft(), lcdprintYear(rtc_year);
+        if(rtc_second > 48 && rtc_second < 52) lcdprintYear(rtc_year);
         if(rtc_second == 52) wipeLeft(), lcdprintTime(rtc_hour, rtc_minute, rtc_second);
       }
       else{
@@ -387,7 +389,6 @@ int check_timeout(){
     return 0;
   }
 }
-
 
 int read_PIR(){
   int motion = digitalRead(PIR);

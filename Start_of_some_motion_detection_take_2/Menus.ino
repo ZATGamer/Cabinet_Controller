@@ -1,3 +1,6 @@
+
+////////// CLOCK MENU //////////
+
 void settime(){
   // This is the Menu for Setting the time.
   cursorStart();
@@ -88,6 +91,7 @@ void settime(){
   // YEAR SETTINGS
   waitForRelease();
   x = 0;
+  b = 1;
   int last_new_year = current_time.year();
   int new_year = current_time.year();
   while(x == 0){
@@ -98,10 +102,10 @@ void settime(){
     }
     if(new_year != last_new_year){
       last_new_year = new_year;
-      lcdPrintYear(new_year);
+      lcdprintYear(new_year);
     }
     
-    lcdSetYear(new_year, current_time.second());
+    lcdprintYear(new_year, current_time.second(), b);
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
@@ -138,7 +142,7 @@ void settime(){
       printDate2(new_month, current_time.day());
     }
     
-    lcdSetDate(new_month, current_time.day(), current_time.second(), b);
+    lcdprintDate(new_month, current_time.day(), current_time.second(), b);
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
@@ -179,7 +183,7 @@ void settime(){
       printDate2(new_month, new_day);
     }
     
-    lcdSetDate(new_month, new_day, current_time.second(), b);
+    lcdprintDate(new_month, new_day, current_time.second(), b);
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
@@ -229,23 +233,30 @@ void settime(){
   
 }
 
+////////// END CLOCK MENU //////////
+
+
+////////// SETTINGS MENU //////////
+
 void settings(){
-  lcd.write(254);
-  lcd.write(0x01);
+  clearLCD();
   lcd.print("IN SETTINGS MENU");
   delay(1000);
-  lcd.write(254);
-  lcd.write(0x01);
+  clearLCD();
 }
 
+////////// END SETTINGS MENU //////////
+
+
+////////// DEAD ZONE SETTINGS MENU //////////
 void deadZoneSettings(){
-  lcd.write(254);
-  lcd.write(0x01);
+  clearLCD();
   lcd.print("IN DZ SET MENU");
   delay(1000);
-  lcd.write(254);
-  lcd.write(0x01);
+  clearLCD();
 }
+
+////////// END DEAD ZONE SETTINGS MENU //////////
 
 
 void waitForRelease(){

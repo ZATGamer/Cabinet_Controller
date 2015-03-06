@@ -2,40 +2,12 @@
 This is all code to control the display.
 */
 
-const int LCDdelay = 10;
+////////// CLOCK DISPLAY //////////
 
-void lcdprintTime_OLD(int HH, int MM, int SS){
-  cursorStart();
-  if(HH < 10){
-    lcd.print(" ");
-    lcd.print(HH);
-  }
-  else{
-    lcd.print(HH);
-  }
-  if(SS % 2 == 0) lcd.print(":");
-  else lcd.print(" ");
-  if(MM < 10){
-    lcd.print("0");
-    lcd.print(MM);
-  }
-  else{
-    lcd.print(MM);
-  }
-  /*lcd.print(":");
-  if(SS < 10){
-    lcd.print("0");
-    lcd.print(SS);
-  }
-  else{
-    lcd.print(SS);
-  }*/
-}
-
-
-// CHANGED THIS
 void lcdprintTime(int HH, int MM, int SS, int b){
   cursorStart();
+  
+  // If setting the Hour Blink, Else Display SOLID.
   if(b == 1){
     if(SS % 2 == 0){
       if(HH < 10){
@@ -68,9 +40,17 @@ void lcdprintTime(int HH, int MM, int SS, int b){
        lcd.print(HH);
     }
   }
+  // Blink the ":" when just displaying the time
+  // While setting time, display Solid.
+  if(b == 0){
+    if(SS % 2 == 0){
+      lcd.print(":");
+    }
+    else lcd.print(" ");
+  }
+  else lcd.print(":");
   
-  lcd.print(":");
-    
+  // If Setting Minute Blink, else display Solid.  
   if(b == 2){
     if(SS % 2 == 0){
       if(MM < 10){
@@ -105,9 +85,10 @@ void lcdprintTime(int HH, int MM, int SS, int b){
   }
 }
 
-
-void lcdSetDate(int MONTH, int DAY, int SS, int b){
+void lcdprintDate(int MONTH, int DAY, int SS, int b){
   cursorStart();
+  
+  // IF setting MONTH Blink, Else Display SOLID
   if(b == 1){
     if(SS % 2 == 0){
       if(MONTH < 10){
@@ -143,6 +124,7 @@ void lcdSetDate(int MONTH, int DAY, int SS, int b){
   
   lcd.print("-");
     
+  // IF Setting Day Blink, Else display SOLID  
   if(b == 2){
     if(SS % 2 == 0){
       if(DAY < 10){
@@ -177,74 +159,22 @@ void lcdSetDate(int MONTH, int DAY, int SS, int b){
   }
 }
 
-void lcdprintDate(int MONTH, int DAY, int YEAR){
-  cursorStart();
-  lcd.print(MONTH);
-  lcd.print("-");
-  lcd.print(DAY);
-  lcd.print("-");
-  lcd.print(YEAR);
+void lcdprintYear(int YEAR, int SS, int b){
+  // IF setting Year BLINK, Else Display SOLID
+  if(b == 1){
+    cursorStart();
+    if(SS % 2 == 0) lcd.print(YEAR), lcd.print(" ");
+    else if(digitalRead(UP_BUTTON) == LOW || digitalRead(DOWN_BUTTON) == LOW) lcd.print(YEAR);
+    else lcd.print("     ");
+  }
+  else cursorStart(), lcd.print(YEAR), lcd.print(" ");
 }
 
-void lcdprintDate2(int MONTH, int DAY){
-  cursorStart();
-  if(MONTH < 10){
-    lcd.print(" ");
-    lcd.print(MONTH);
-  }
-  else{
-    lcd.print(MONTH);
-  }
-  lcd.print("-");
-  if(DAY < 10){
-    lcd.print(DAY);
-    lcd.print(" ");
-  }
-  else{
-    lcd.print(DAY);
-  }
-}
-
-void lcdPrintYear(int YEAR){
-  cursorStart();
-  lcd.print(YEAR);
-  lcd.print(" ");
-}
-
-void lcdSetYear(int YEAR, int SS){
-  cursorStart();
-  if(SS % 2 == 0) lcd.print(YEAR);
-  else if(digitalRead(UP_BUTTON) == LOW || digitalRead(DOWN_BUTTON) == LOW) lcd.print(YEAR);
-  else lcd.print("     ");
-}
+////////// END CLOCK DISPLAY //////////
 
 
+////////// Transitions //////////
 
-
-
-void lcdprintSecond(int SS){
-  lcd.write(254);
-  lcd.write(206);
-  if(SS < 10){
-    lcd.print("0");
-    lcd.print(SS);
-  }
-  else{
-    lcd.print(SS);
-  }
-}
-
-void lcd_inital_start(){
-  lcd.begin(9600);
-  delay(500);
-  lcd.write(254);
-  lcd.write(0xC);
-  delay(LCDdelay);
-  clearLCD();
-}
-
-
-// Transitions
 void lcdDash(){
   cursorStart();
   lcd.print("-----");
@@ -273,9 +203,13 @@ void wipeLeft(){
   }
 }
 
-// END Transitions
+////////// END Transitions //////////
 
-// LCD General Control
+
+////////// LCD Utilities //////////
+
+const int LCDdelay = 10;
+
 void cursorStart(){
   lcd.write(254);
   lcd.write(128);
@@ -286,5 +220,29 @@ void clearLCD(){
   lcd.write(0x01);
   delay(LCDdelay);
 }
-// END LCD General Control
+
+void lcd_inital_start(){
+  lcd.begin(9600);
+  delay(500);
+  lcd.write(254);
+  lcd.write(0xC);
+  delay(LCDdelay);
+  clearLCD();
+}
+
+////////// END LCD Utilities //////////
+
+
+// This function is Strictly for Development Once Final, this will go away.
+void lcdprintSecond(int SS){
+  lcd.write(254);
+  lcd.write(206);
+  if(SS < 10){
+    lcd.print("0");
+    lcd.print(SS);
+  }
+  else{
+    lcd.print(SS);
+  }
+}
     
