@@ -1,33 +1,50 @@
 #include <Wire.h>
-#include "RTClib.h"
+#include <RTClib.h>
+#include <SoftwareSerial.h>
 
 RTC_DS1307 RTC;
 
-
 // Defining Veriables to Pins
 #define PIR 2
+#define PHOTO 2
+
 #define PIR_LED 13
-#define OVERRIDE_LED 8
+#define OVERRIDE_LED 3
+#define CAB_POWER_LED 6
+#define CAB_LIGHTS_LED 5
 
 #define CAB_POWER 9
 #define CAB_LIGHTS 10
 
-#define CAB_POWER_SWITCH 6
+#define CAB_POWER_SWITCH 4
 #define CAB_LIGHTS_SWITCH 7
-#define OVERRIDE 3
+#define OVERRIDE 8
 
 #define BRIGHT_POT 3
+
+#define UP_BUTTON 11
+#define DOWN_BUTTON 12
+
+// Setting up SoftwareSerial to talk to the LCD pannel.
+SoftwareSerial lcd(20, 14);
 
 // Global Variables
 
 // This is the last time the lights were told to turn on.
 long last_time;
+int last_second, last_minute;
+int enter_settime, enter_settings, enter_dead_zone_settings;
 
+// This is how long the Cab Lights and Power will stay on with no motion detected.
 int timeout = 15;
 
-int fade_delay = 10;
+// Cab Lights Fade in/out delay.
+int base_fade_delay = 10;
+
+// 
 int max_brightness = 0;
 int last_brightness = 0;
+int switch_brightness = 0;
 
 // Inital Setting for Dead Zone time.
 int dz_start = 2300;
@@ -55,33 +72,50 @@ void setup() {
   // Setting up the Real Time Clock
   Wire.begin();
   RTC.begin();
-  Serial.begin(9600);
+  //Serial.begin(9600);
+  
+  // Inital LCD Settings
+  lcd_inital_start();
+  
  
   // Setting Pin Modes
   pinMode(PIR, INPUT);
+  pinMode(PHOTO, INPUT);
+  
   pinMode(CAB_POWER, OUTPUT);
   pinMode(CAB_LIGHTS, OUTPUT);
+  pinMode(CAB_POWER_LED, OUTPUT);
+  pinMode(CAB_LIGHTS_LED, OUTPUT);
+  
   pinMode(CAB_POWER_SWITCH, INPUT);
   pinMode(CAB_LIGHTS_SWITCH, INPUT);
   pinMode(OVERRIDE, INPUT);
+  
   pinMode(PIR_LED, OUTPUT);
   pinMode(OVERRIDE_LED, OUTPUT);
-  RTC.adjust(DateTime(2015, 11, 1, 1, 59, 50));
+  
+  pinMode(UP_BUTTON, INPUT);
+  pinMode(DOWN_BUTTON, INPUT);
+  
+  
+  //RTC.adjust(DateTime(2015, 3, 8, 1, 59, 50));
   //RTC.adjust(DateTime(__DATE__, __TIME__));
   
   digitalWrite(OVERRIDE_LED, LOW);
   
   // Checking to see if the RTC is running, If not print message.
   if (! RTC.isrunning()) {
-    Serial.println("RTC NOT RUNNING");
+    clearLCD();
+    lcd.print("8888");
     int x = 0;
+    int y = 0;
     while(x == 0){
-      digitalWrite(PIR_LED, HIGH);
-      delay(1000);
-      digitalWrite(PIR_LED, LOW);
-      delay(1000);
+      if(y < 15000) digitalWrite(OVERRIDE_LED, HIGH), y += 1;
+      else digitalWrite(OVERRIDE_LED, LOW), y += 1;
+      if(y == 30000) y = 0;
       if(digitalRead(OVERRIDE) == LOW){
-        RTC.adjust(DateTime(__DATE__, __TIME__));
+        RTC.adjust(DateTime(2015, 1, 1, 1, 1, 1));
+        settime();
         x = 1;
       }
     }
@@ -92,8 +126,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   // Read in the current time
-  //delay (500);
-  Serial.println("---------------------");
+  
   DateTime rtc_now = RTC.now();
   
   rtc_year = rtc_now.year();
@@ -105,44 +138,14 @@ void loop() {
   rtc_second = rtc_now.second();
   rtc_unixtime = rtc_now.unixtime();
 
-  if(in_DST() == 1){
+  if(in_DST()){
     rtc_hour = rtc_hour + 1;
   }
-  Serial.print("RTC Date: ");
-  Serial.print(rtc_now.month());
-  Serial.print("-");
-  Serial.print(rtc_now.day());
-  Serial.print("-");
-  Serial.println(rtc_now.year());
-  
-  Serial.print("RTC TIME: ");
-  Serial.print(rtc_now.hour());
-  Serial.print(":");
-  Serial.print(rtc_now.minute());
-  Serial.print(":");
-  Serial.println(rtc_now.second());
-  
-  Serial.print("DST Date: ");
-  Serial.print(rtc_month);
-  Serial.print("-");
-  Serial.print(rtc_day);
-  Serial.print("-");
-  Serial.println(rtc_year);
-  
-  Serial.print("DST Time: ");
-  Serial.print(rtc_hour);
-  Serial.print(":");
-  Serial.print(rtc_minute);
-  Serial.print(":");
-  Serial.println(rtc_second);
-  
+    
   // Get the value for the max brightness.
-  max_brightness = read_pot();
+  max_brightness = analogRead(BRIGHT_POT) / 4;
+  int photo_cell = analogRead(PHOTO) / 4;
   
-  if(max_brightness != last_brightness && cab_lights_on == 1){
-    analogWrite(CAB_LIGHTS, max_brightness);
-    last_brightness = max_brightness;
-  }
   // read in switch setting
   int cab_power_setting = digitalRead(CAB_POWER_SWITCH);
   int cab_lights_setting = digitalRead(CAB_LIGHTS_SWITCH);
@@ -154,7 +157,71 @@ void loop() {
   int motion = read_PIR();
   
   // Check if in deadzone
-  int dead_zone = in_dead_zone(int_time());  
+  int dead_zone = in_dead_zone(int_time());
+  
+  if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
+    enter_settime += 1;
+    if(enter_settime == 100) settime(), enter_settime = 0;
+  }
+  else enter_settime = 0;
+  
+  if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH){
+    enter_settings += 1;
+    if(enter_settings == 100) settings(), enter_settings = 0;
+  }
+  else enter_settings = 0;
+  
+  if(digitalRead(UP_BUTTON) == HIGH && digitalRead(DOWN_BUTTON) == LOW){
+    enter_dead_zone_settings += 1;
+    if(enter_dead_zone_settings == 100) deadZoneSettings(), enter_dead_zone_settings = 0;
+  }
+  else enter_dead_zone_settings = 0;
+  
+  // Update Output
+  if(last_second != rtc_second){
+    last_second = rtc_second; 
+  
+    // Display Date with Transitions. 
+      if(rtc_second >= 45 && rtc_second <= 52){
+        if(rtc_second == 45) wipeLeft(), lcdprintDate2(rtc_month, rtc_day);
+        if(rtc_second > 45 && rtc_second < 48) lcdprintDate2(rtc_month, rtc_day);
+        if(rtc_second == 48) wipeLeft(), lcdPrintYear(rtc_year);
+        if(rtc_second > 48 && rtc_second < 52) lcdPrintYear(rtc_year);
+        if(rtc_second == 52) wipeLeft(), lcdprintTime_OLD(rtc_hour, rtc_minute, rtc_second);
+      }
+      else{
+        lcdprintTime_OLD(rtc_hour, rtc_minute, rtc_second);
+      }
+  }
+  
+  // TEMP code for Development
+  lcdprintSecond(rtc_second);
+  
+    
+  if(max_brightness != last_brightness && cab_lights_on == 1){
+    analogWrite(CAB_LIGHTS, max_brightness);
+    last_brightness = max_brightness;
+  }
+  
+  if(photo_cell <= 50){
+    switch_brightness = 10;
+  }
+  else{
+    switch_brightness = 255;
+  }
+  
+  if(cab_power_setting == LOW) {
+    analogWrite(CAB_POWER_LED, switch_brightness);
+  }
+  else{
+    digitalWrite(CAB_POWER_LED, LOW);
+  }
+  if(cab_lights_setting == LOW){
+    analogWrite(CAB_LIGHTS_LED, switch_brightness);
+  }
+  else{
+    digitalWrite(CAB_LIGHTS_LED, LOW);
+  }
   
   // Control the Override button light depending on what is happening
   // Turn the light on if in the dead zone AND the Cab power, and Lights are both off.
@@ -162,7 +229,7 @@ void loop() {
   // If no switch is set to on. Then nothing will happen when the button is pressed.
   
   if(dead_zone == 1 && (cab_power_setting == 0 || cab_lights_setting == 0) && (cab_power_on == 0 && cab_lights_on == 0)){
-    digitalWrite(OVERRIDE_LED, HIGH);
+    analogWrite(OVERRIDE_LED, switch_brightness);
   }
   else{
     digitalWrite(OVERRIDE_LED, LOW);
@@ -235,20 +302,36 @@ void control_lights(int cab_power_setting, int cab_lights_setting, int motion){
 
 
 int fade_out(int max_level){
+  lcdDash();
+  int fdelay = fade_delay(max_level);
   for(int fade = max_level; fade >= 0; fade--){
     analogWrite(CAB_LIGHTS, fade);
-    delay(fade_delay);
+    delay(fdelay);
   }
   return 0;
 }
 
 
 int fade_in(int max_level){
+  lcdDash();
+  int fdelay = fade_delay(max_level);
   for(int fade = 0; fade <= max_level; fade++){
     analogWrite(CAB_LIGHTS, fade);
-    delay(fade_delay);
+    delay(fdelay);
   }
   return 1;
+}
+
+
+int fade_delay(int max_brightness){
+  if(max_brightness != 0){
+    int temp = (base_fade_delay * 255);
+    int temp2 = temp / max_brightness;
+    return temp2;
+  }
+  else{
+    return base_fade_delay;
+  }
 }
 
 
@@ -319,52 +402,24 @@ int read_PIR(){
   return motion;
 }
 
-int read_pot(){
-  int pot_value = analogRead(BRIGHT_POT) / 4;
-  return pot_value;
+void printTime(int HH, int MM, int SS){
+  Serial.print(HH);
+  Serial.print(":");
+  Serial.print(MM);
+  Serial.print(":");
+  Serial.println(SS);
 }
 
+void printDate(int MONTH, int DAY, int YEAR){
+  Serial.print(MONTH);
+  Serial.print("-");
+  Serial.print(DAY);
+  Serial.print("-");
+  Serial.println(YEAR);
+}
 
-// DST Settings
-int dst_start_month = 3;
-int dst_start_week = 1;
-int dst_start_dow = 0;
-int dst_start_hour = 2;
-
-int dst_end_month = 11;
-int dst_end_week = 1;
-int dst_end_dow = 0;
-int dst_end_hour = 2;
-
-int in_DST(){
-  boolean dst = false; //Assume we're not in DST
-
-  if(rtc_month > dst_start_month && rtc_month < dst_end_month) dst = true; //DST is happening!
-
-//  byte DoW = day_of_week(rtc_year, rtc_month, rtc_day); //Get the day of the week. 0 = Sunday, 6 = Saturday
-
-  //In March, we are DST if our previous Sunday was on or after the 8th.
-  int previousSunday = rtc_day - rtc_dayOfWeek;
-  
-  // Calculating the start and end weeks.
-  int start_week = (dst_start_week * 7) - 7;
-  int end_week = (dst_end_week * 7) - 7;
-  
-  if (rtc_month == dst_start_month)
-  {
-    if(previousSunday > start_week) dst = true; 
-  } 
-
-  //In November we must be before the first Sunday to be dst.
-  //That means the previous Sunday must be before the 1st.
-  if(rtc_month == dst_end_month)
-  {
-    if(previousSunday <= end_week) dst = true;
-  }
-  
-  if (rtc_month == dst_start_month && rtc_dayOfWeek == dst_start_dow && rtc_hour < dst_start_hour) dst = false;
-  if (rtc_month == dst_end_month && rtc_dayOfWeek == dst_end_dow && rtc_hour < dst_end_hour) dst = true;
-  
-  if(dst == true) return 1;
-  else return 0;
+void printDate2(int MONTH, int DAY){
+  Serial.print(MONTH);
+  Serial.print("-");
+  Serial.println(DAY);
 }
