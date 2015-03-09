@@ -1,6 +1,7 @@
 #include <Wire.h>
 #include <RTClib.h>
 #include <SoftwareSerial.h>
+#include <EEPROM.h>
 
 RTC_DS1307 RTC;
 
@@ -30,9 +31,86 @@ SoftwareSerial lcd(20, 14);
 
 // Global Variables
 
+////////// EEPROM ADDRESSES //////////
+// Dead Zone Settings address.
+int dead_zone_add = 0;
+int dz_custom_default_add = 1;
+int dz_startH_default_add = 2;
+int dz_startM_default_add = 3;
+int dz_endH_default_add = 4;
+int dz_endM_default_add = 5;
+
+int dz_custom_0_add = 6;
+int dz_startH_0_add = 7;
+int dz_startM_0_add = 8;
+int dz_endH_0_add = 9;
+int dz_endM_0_add = 10;
+
+int dz_custom_1_add = 7;
+int dz_startH_1_add = 5;
+int dz_startM_1_add = 5;
+int dz_endH_1_add = 6;
+int dz_endM_1_add = 6;
+
+int dz_custom_2_add = 10;
+int dz_startH_2_add = 5;
+int dz_startM_2_add = 5;
+int dz_endH_2_add = 6;
+int dz_endM_2_add = 6;
+
+int dz_custom_3_add = 13;
+int dz_startH_3_add = 5;
+int dz_startM_3_add = 5;
+int dz_endH_3_add = 6;
+int dz_endM_3_add = 6;
+
+int dz_custom_4_add = 16;
+int dz_startH_4_add = 5;
+int dz_startM_4_add = 5;
+int dz_endH_4_add = 6;
+int dz_endM_4_add = 6;
+
+int dz_custom_5_add = 19;
+int dz_startH_5_add = 5;
+int dz_startM_5_add = 5;
+int dz_endH_5_add = 6;
+int dz_endM_5_add = 6;
+
+int dz_custom_6_add = 22;
+int dz_startH_6_add = 5;
+int dz_startM_6_add = 5;
+int dz_endH_6_add = 6;
+int dz_endM_6_add = 6;
+
+// DST Settings Addresses
+int dst_start_month_add = 25;
+int dst_start_week_add = 26;
+int dst_start_dow_add = 27;
+int dst_start_hour_add = 28;
+  
+  // DST End Settings
+int dst_end_month_add = 29;
+int dst_end_week_add = 30;
+int dst_end_dow_add = 31;
+int dst_end_hour_add = 32;
+
+// Fade Delay
+int base_fade_delay_add = 33;
+  
+// Timeout Delay
+int timeout_add = 34;
+
+////////// END EEPROM ADDRESSES //////////
+
+
+
+
+
 // This is the last time the lights were told to turn on.
 long last_time;
 int last_second, last_minute;
+
+// Global Variables for Entering Menues.
 int enter_settime, enter_settings, enter_dead_zone_settings;
 
 // This is how long the Cab Lights and Power will stay on with no motion detected.
@@ -42,9 +120,7 @@ int timeout = 15;
 int base_fade_delay = 10;
 
 // 
-int max_brightness = 0;
-int last_brightness = 0;
-int switch_brightness = 0;
+int max_brightness, last_brightness, switch_brightness;
 
 // Inital Setting for Dead Zone time.
 int dz_start = 2300;
@@ -57,15 +133,10 @@ int cab_lights_on = 0;
 
 // variables used for time
 // This is so I can be lazy and not pass these variables everywhere as they are global.
-int rtc_year = 0;
-int rtc_month = 0;
-int rtc_day = 0;
-int rtc_dayOfWeek = 0;
-int rtc_hour = 0;
-int rtc_minute = 0;
-int rtc_second = 0;
+int rtc_year, rtc_month, rtc_day, rtc_dayOfWeek, rtc_hour, rtc_minute, rtc_second;
 long rtc_unixtime = 0;
 
+// Defining functions for optional variables.
 void lcdprintTime(int HH, int MM, int SS, int b = 0);
 void lcdprintDate(int MONTH, int DAY, int SS = 0, int b = 0);
 void lcdprintYear(int YEAR, int SS = 0, int b = 0);
@@ -74,34 +145,27 @@ void setup() {
   // Setting up the Real Time Clock
   Wire.begin();
   RTC.begin();
-  //Serial.begin(9600);
+  
+  // For Debugging.
+  Serial.begin(9600);
   
   // Inital LCD Settings
   lcd_inital_start();
   
- 
   // Setting Pin Modes
   pinMode(PIR, INPUT);
   pinMode(PHOTO, INPUT);
-  
   pinMode(CAB_POWER, OUTPUT);
   pinMode(CAB_LIGHTS, OUTPUT);
   pinMode(CAB_POWER_LED, OUTPUT);
   pinMode(CAB_LIGHTS_LED, OUTPUT);
-  
   pinMode(CAB_POWER_SWITCH, INPUT);
   pinMode(CAB_LIGHTS_SWITCH, INPUT);
   pinMode(OVERRIDE, INPUT);
-  
   pinMode(PIR_LED, OUTPUT);
   pinMode(OVERRIDE_LED, OUTPUT);
-  
   pinMode(UP_BUTTON, INPUT);
   pinMode(DOWN_BUTTON, INPUT);
-  
-  
-  //RTC.adjust(DateTime(2015, 3, 8, 1, 59, 50));
-  //RTC.adjust(DateTime(__DATE__, __TIME__));
   
   digitalWrite(OVERRIDE_LED, LOW);
   
@@ -122,27 +186,27 @@ void setup() {
       }
     }
   }
+  
+  // Read in all the Stored Global Variables from EEPROM.
+  intial_read_EEPROM();
+  for(int x = 0; x < 35; x++){
+    int value = EEPROM.read(x);
+    Serial.print(x);
+    Serial.print(": ");
+    Serial.println(value);
+  }
 }
 
 
 void loop() {
-  // put your main code here, to run repeatedly:
-  // Read in the current time
+  // Get Current time.
+  current_time();
   
-  DateTime rtc_now = RTC.now();
-  
-  rtc_year = rtc_now.year();
-  rtc_month = rtc_now.month();
-  rtc_day = rtc_now.day();
-  rtc_dayOfWeek = rtc_now.dayOfWeek();
-  rtc_hour = rtc_now.hour();
-  rtc_minute = rtc_now.minute();
-  rtc_second = rtc_now.second();
-  rtc_unixtime = rtc_now.unixtime();
-
   if(in_DST()){
-    rtc_hour = rtc_hour + 1;
+    rtc_hour += 1;
   }
+  
+  //custom_DZ();
     
   // Get the value for the max brightness.
   max_brightness = analogRead(BRIGHT_POT) / 4;
@@ -348,23 +412,14 @@ int int_time(){
   }
 }
 
-
-int in_dead_zone(int current){
-  if(dz_start < dz_end){
-    if(dz_start <= current && current < dz_end){
-      return 1;
-    }
-    else{
-      return 0;
-    }
+int int_time_passed(int HH, int MM){
+  if(HH != 0){
+    int time = (HH * 100) + MM;
+    return time;
   }
   else{
-    if(! (dz_end <= current && current < dz_start)){
-      return 1;
-    }
-    else {
-      return 0;
-    }
+    int time = MM;
+    return time;
   }
 }
 
@@ -403,24 +458,17 @@ int read_PIR(){
   return motion;
 }
 
-void printTime(int HH, int MM, int SS){
-  Serial.print(HH);
-  Serial.print(":");
-  Serial.print(MM);
-  Serial.print(":");
-  Serial.println(SS);
+void current_time() {
+  // Read in the current time and update the Global Variables.
+  DateTime rtc_now = RTC.now();
+  
+  rtc_year = rtc_now.year();
+  rtc_month = rtc_now.month();
+  rtc_day = rtc_now.day();
+  rtc_dayOfWeek = rtc_now.dayOfWeek();
+  rtc_hour = rtc_now.hour();
+  rtc_minute = rtc_now.minute();
+  rtc_second = rtc_now.second();
+  rtc_unixtime = rtc_now.unixtime();
 }
 
-void printDate(int MONTH, int DAY, int YEAR){
-  Serial.print(MONTH);
-  Serial.print("-");
-  Serial.print(DAY);
-  Serial.print("-");
-  Serial.println(YEAR);
-}
-
-void printDate2(int MONTH, int DAY){
-  Serial.print(MONTH);
-  Serial.print("-");
-  Serial.println(DAY);
-}

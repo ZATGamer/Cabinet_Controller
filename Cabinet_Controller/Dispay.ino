@@ -127,35 +127,17 @@ void lcdprintDate(int MONTH, int DAY, int SS, int b){
   // IF Setting Day Blink, Else display SOLID  
   if(b == 2){
     if(SS % 2 == 0){
-      if(DAY < 10){
-        lcd.print("0");
         lcd.print(DAY);
-      }
-      else{
-        lcd.print(DAY);
-      }
     }
     else if(digitalRead(UP_BUTTON) == LOW || digitalRead(DOWN_BUTTON) == LOW){
-      if(DAY < 10){
-        lcd.print("0");
         lcd.print(DAY);
-      }
-      else{
-        lcd.print(DAY);
-      }
     }
     else{
       lcd.print("  ");
     }
   }
   else{
-    if(DAY < 10){
-      lcd.print("0");
-      lcd.print(DAY);
-      }
-      else{
-        lcd.print(DAY);
-      }
+    lcd.print(DAY);
   }
 }
 

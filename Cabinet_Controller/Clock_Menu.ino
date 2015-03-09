@@ -236,30 +236,3 @@ void settime(){
 ////////// END CLOCK MENU //////////
 
 
-////////// SETTINGS MENU //////////
-
-void settings(){
-  clearLCD();
-  lcd.print("IN SETTINGS MENU");
-  delay(1000);
-  clearLCD();
-}
-
-////////// END SETTINGS MENU //////////
-
-
-////////// DEAD ZONE SETTINGS MENU //////////
-void deadZoneSettings(){
-  clearLCD();
-  lcd.print("IN DZ SET MENU");
-  delay(1000);
-  clearLCD();
-}
-
-////////// END DEAD ZONE SETTINGS MENU //////////
-
-
-void waitForRelease(){
-  while(digitalRead(UP_BUTTON) == LOW || digitalRead(DOWN_BUTTON) == LOW){
-  }
-}
