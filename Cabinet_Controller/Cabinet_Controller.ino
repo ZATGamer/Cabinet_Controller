@@ -31,81 +31,6 @@ SoftwareSerial lcd(20, 14);
 
 // Global Variables
 
-////////// EEPROM ADDRESSES //////////
-// Dead Zone Settings address.
-int dead_zone_add = 0;
-int dz_custom_default_add = 1;
-int dz_startH_default_add = 2;
-int dz_startM_default_add = 3;
-int dz_endH_default_add = 4;
-int dz_endM_default_add = 5;
-
-int dz_custom_0_add = 6;
-int dz_startH_0_add = 7;
-int dz_startM_0_add = 8;
-int dz_endH_0_add = 9;
-int dz_endM_0_add = 10;
-
-int dz_custom_1_add = 7;
-int dz_startH_1_add = 5;
-int dz_startM_1_add = 5;
-int dz_endH_1_add = 6;
-int dz_endM_1_add = 6;
-
-int dz_custom_2_add = 10;
-int dz_startH_2_add = 5;
-int dz_startM_2_add = 5;
-int dz_endH_2_add = 6;
-int dz_endM_2_add = 6;
-
-int dz_custom_3_add = 13;
-int dz_startH_3_add = 5;
-int dz_startM_3_add = 5;
-int dz_endH_3_add = 6;
-int dz_endM_3_add = 6;
-
-int dz_custom_4_add = 16;
-int dz_startH_4_add = 5;
-int dz_startM_4_add = 5;
-int dz_endH_4_add = 6;
-int dz_endM_4_add = 6;
-
-int dz_custom_5_add = 19;
-int dz_startH_5_add = 5;
-int dz_startM_5_add = 5;
-int dz_endH_5_add = 6;
-int dz_endM_5_add = 6;
-
-int dz_custom_6_add = 22;
-int dz_startH_6_add = 5;
-int dz_startM_6_add = 5;
-int dz_endH_6_add = 6;
-int dz_endM_6_add = 6;
-
-// DST Settings Addresses
-int dst_start_month_add = 25;
-int dst_start_week_add = 26;
-int dst_start_dow_add = 27;
-int dst_start_hour_add = 28;
-  
-  // DST End Settings
-int dst_end_month_add = 29;
-int dst_end_week_add = 30;
-int dst_end_dow_add = 31;
-int dst_end_hour_add = 32;
-
-// Fade Delay
-int base_fade_delay_add = 33;
-  
-// Timeout Delay
-int timeout_add = 34;
-
-////////// END EEPROM ADDRESSES //////////
-
-
-
-
-
 // This is the last time the lights were told to turn on.
 long last_time;
 int last_second, last_minute;
@@ -121,10 +46,6 @@ int base_fade_delay = 10;
 
 // 
 int max_brightness, last_brightness, switch_brightness;
-
-// Inital Setting for Dead Zone time.
-int dz_start = 2300;
-int dz_end = 800;
 
 // variables used for current status
 int override = 0;
@@ -147,7 +68,7 @@ void setup() {
   RTC.begin();
   
   // For Debugging.
-  Serial.begin(9600);
+  //Serial.begin(9600);
   
   // Inital LCD Settings
   lcd_inital_start();
@@ -186,15 +107,11 @@ void setup() {
       }
     }
   }
-  
-  // Read in all the Stored Global Variables from EEPROM.
-  intial_read_EEPROM();
-  for(int x = 0; x < 35; x++){
-    int value = EEPROM.read(x);
+  /*for(int x = 0; x < 70; x++){
     Serial.print(x);
     Serial.print(": ");
-    Serial.println(value);
-  }
+    Serial.println(EEPROM.read(x));
+  }*/
 }
 
 
@@ -202,11 +119,10 @@ void loop() {
   // Get Current time.
   current_time();
   
+  // Check if in DST
   if(in_DST()){
-    rtc_hour += 1;
+    rtc_hour = rtc_hour + 1;
   }
-  
-  //custom_DZ();
     
   // Get the value for the max brightness.
   max_brightness = analogRead(BRIGHT_POT) / 4;
@@ -223,7 +139,7 @@ void loop() {
   int motion = read_PIR();
   
   // Check if in deadzone
-  int dead_zone = in_dead_zone(int_time());
+  int in_dead_zone = dead_zone(rtc_dayOfWeek, int_time());
   
   if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
     enter_settime += 1;
@@ -239,7 +155,7 @@ void loop() {
   
   if(digitalRead(UP_BUTTON) == HIGH && digitalRead(DOWN_BUTTON) == LOW){
     enter_dead_zone_settings += 1;
-    if(enter_dead_zone_settings == 100) deadZoneSettings(), enter_dead_zone_settings = 0;
+    if(enter_dead_zone_settings == 100) dead_zone_menu(), enter_dead_zone_settings = 0;
   }
   else enter_dead_zone_settings = 0;
   
@@ -294,7 +210,7 @@ void loop() {
   // Also if at least one of the switches are set to ON.
   // If no switch is set to on. Then nothing will happen when the button is pressed.
   
-  if(dead_zone == 1 && (cab_power_setting == 0 || cab_lights_setting == 0) && (cab_power_on == 0 && cab_lights_on == 0)){
+  if(in_dead_zone == 1 && (cab_power_setting == 0 || cab_lights_setting == 0) && (cab_power_on == 0 && cab_lights_on == 0)){
     analogWrite(OVERRIDE_LED, switch_brightness);
   }
   else{
@@ -306,12 +222,12 @@ void loop() {
   }
   
   // If in deadzone and Override pressed Turn on lights and power as by settings.
-  if(dead_zone == 1 && override == LOW){
+  if(in_dead_zone == 1 && override == LOW){
     override_on(cab_power_setting, cab_lights_setting);
   }
   
   // If in deadzone and Lights or Power is on. Check if it needs to be turned off.
-  if(dead_zone == 0 || cab_power_on == 1 || cab_lights_on == 1){    
+  if(in_dead_zone == 0 || cab_power_on == 1 || cab_lights_on == 1){    
     control_lights(cab_power_setting, cab_lights_setting, motion);
   }
 }

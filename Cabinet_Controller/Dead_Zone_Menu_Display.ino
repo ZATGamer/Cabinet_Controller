@@ -80,17 +80,14 @@ void lcdprintDZTime(int HH, int MM, int SS, int b){
 }
 
 
-void custom_DZ_display(int dow, int setting){
+void yes_no_option_display(int option, int setting){
   cursorStart();
-  lcd.print(dow);
+  lcd.print(option);
   lcd.print("-");
   DateTime current = RTC.now();
   
   if(current.second() % 2 == 0) lcd.print(setting);
   else if(digitalRead(UP_BUTTON) == LOW || digitalRead(DOWN_BUTTON) == LOW) lcd.print(setting);
-  else lcd.print("  ");
-  
-  
-  
-  
+  else lcd.print("  "); 
 }
+

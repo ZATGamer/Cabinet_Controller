@@ -9,6 +9,11 @@ void settime(){
   DateTime current_time = RTC.now();
   int x = 0;
   int new_hour = current_time.hour();
+  if(in_DST()){
+    new_hour += 1;
+    if(new_hour < 0) new_hour = 23;
+    if(new_hour > 23) new_hour = 0;
+  }
   int new_minute = current_time.minute();
   int new_second = 0;
   int last_new_hour = current_time.hour();
@@ -221,6 +226,12 @@ void settime(){
     }
   }
   waitForRelease();
+  
+  if(in_DST()){
+      new_hour -= 1;
+      if(new_hour < 0) new_hour = 23;
+      if(new_hour > 23) new_hour = 0;
+  }
   
   if(new_month != current_time.month() || new_day != current_time.day() || new_year != current_time.year() || new_hour != current_time.hour() || new_minute != current_time.minute()){
     lcdDash();
