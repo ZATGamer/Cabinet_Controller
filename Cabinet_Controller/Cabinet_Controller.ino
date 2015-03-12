@@ -26,6 +26,13 @@ RTC_DS1307 RTC;
 #define UP_BUTTON 11
 #define DOWN_BUTTON 12
 
+///////////////////////
+
+#define cab_timeout_add 0
+#define cab_timeout_modifier_add 1
+#define base_fade_delay_add 2
+
+
 // Setting up SoftwareSerial to talk to the LCD pannel.
 SoftwareSerial lcd(20, 14);
 
@@ -38,14 +45,9 @@ int last_second, last_minute;
 // Global Variables for Entering Menues.
 int enter_settime, enter_settings, enter_dead_zone_settings;
 
-// This is how long the Cab Lights and Power will stay on with no motion detected.
-int timeout = 15;
+int last_brightness, switch_brightness;
 
-// Cab Lights Fade in/out delay.
-int base_fade_delay = 10;
-
-// 
-int max_brightness, last_brightness, switch_brightness;
+int max_brightness;
 
 // variables used for current status
 int override = 0;
@@ -102,27 +104,27 @@ void setup() {
       if(y == 30000) y = 0;
       if(digitalRead(OVERRIDE) == LOW){
         RTC.adjust(DateTime(2015, 1, 1, 1, 1, 1));
-        settime();
+        set_clock();
         x = 1;
       }
     }
   }
-  /*for(int x = 0; x < 70; x++){
+  for(int x = 0; x < 70; x++){
     Serial.print(x);
     Serial.print(": ");
     Serial.println(EEPROM.read(x));
-  }*/
+  }
 }
 
 
-void loop() {
+void loop() {  
   // Get Current time.
   current_time();
   
   // Check if in DST
   if(in_DST()){
     rtc_hour = rtc_hour + 1;
-  }
+  }  
     
   // Get the value for the max brightness.
   max_brightness = analogRead(BRIGHT_POT) / 4;
@@ -143,7 +145,7 @@ void loop() {
   
   if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
     enter_settime += 1;
-    if(enter_settime == 100) settime(), enter_settime = 0;
+    if(enter_settime == 100) set_time(), enter_settime = 0;
   }
   else enter_settime = 0;
   
@@ -269,7 +271,7 @@ void control_lights(int cab_power_setting, int cab_lights_setting, int motion){
     // NO MOTION DETECTED
     digitalWrite(PIR_LED, LOW);
     // check to see how long no motion detected
-    if(rtc_unixtime > last_time + timeout){
+    if(check_timeout()){
       // This means the timeout has been reachted and we are going to turn the lights off.
       if(cab_power_on == 1){
         digitalWrite(CAB_POWER, LOW);
@@ -306,6 +308,7 @@ int fade_in(int max_level){
 
 
 int fade_delay(int max_brightness){
+  int base_fade_delay = EEPROM.read(base_fade_delay_add);
   if(max_brightness != 0){
     int temp = (base_fade_delay * 255);
     int temp2 = temp / max_brightness;
@@ -353,12 +356,12 @@ void override_on(int power, int lights){
 
 
 int check_timeout(){
-  if(last_time > rtc_unixtime + timeout){
-    return 1;
-  }
-  else{
-    return 0;
-  }
+  int modifier;
+  if(EEPROM.read(cab_timeout_modifier_add) == 1) modifier = 60;
+  else modifier = 1;
+  
+  if(rtc_unixtime > last_time + (EEPROM.read(cab_timeout_add) * modifier)) return 1;
+  else return 0;
 }
 
 int read_PIR(){

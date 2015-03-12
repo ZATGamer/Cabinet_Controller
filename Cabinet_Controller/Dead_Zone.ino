@@ -116,28 +116,16 @@ int dead_zone(int dow, int current){
       }
     }
   }
-  else{
-    // If no dead zone selected. Return 0 to indicate Out of DeadZone.
-    return 0;
-  }
+  else return 0; // If no dead zone selected. Return 0 to indicate Out of DeadZone.
+    
   
   // Now we have the Dead Zone values, lets determin if we are in or out of the Dead Zone.
   if(dz_start < dz_end){
-    if(dz_start <= current && current < dz_end){
-      return 1;
-    }
-    else{
-      return 0;
-    }
+    if(dz_start <= current && current < dz_end) return 1;
+    else return 0;
   }
-  else{
-    if(! (dz_end <= current && current < dz_start)){
-      return 1;
-    }
-    else {
-      return 0;
-    }
-  }
+  else if(! (dz_end <= current && current < dz_start)) return 1;
+  else return 0;
 }
 
 void dead_zone_menu(){  
@@ -146,9 +134,7 @@ void dead_zone_menu(){
   
   // Wait for the buttons to be released
   waitForRelease();
-  
   // Ask if there Should be a Dead Zone
-  int x = 0;
   
   // Read in the dz variable form EEPROM and Error Check. If it has never been set. Set to 0.
   int dz = EEPROM.read(_dead_zone_add);
@@ -156,30 +142,25 @@ void dead_zone_menu(){
   
   // General Variables used for button presses.
   int up_pressed, down_pressed;
+  int x = 0;
   while(x == 0){
     // At this point Lets display the current value.
     yes_no_option_display(00, dz);
         
     // Button Press Checking.
-    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
-      x += 1;
-    }
+    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW) x += 1;
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
       if(up_pressed == 15) dz += 1, up_pressed = 0;
     }
-    else{
-      up_pressed = 0;
-    }
+    else up_pressed = 0;
     
     if(digitalRead(DOWN_BUTTON) == LOW && digitalRead(UP_BUTTON) == HIGH) {
       down_pressed += 1;
       if(down_pressed == 15) dz -= 1, down_pressed = 0;
     }
-    else{
-      down_pressed = 0;
-    }
+    else down_pressed = 0;
     
     if(dz > 1) dz = 0;
     if(dz < 0) dz = 1;
@@ -196,31 +177,24 @@ void dead_zone_menu(){
     // Read in option variable and Error Check.
     int option = EEPROM.read(dz_option_add);
     if(option == 255) option = 0;
-    
-    
+        
     while(x == 0){
       // Add display output.
       yes_no_option_display(1, option);
       
-      if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
-        x += 1;
-      }
+      if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW) x += 1;
     
       if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
         up_pressed += 1;
         if(up_pressed == 15) option += 1, up_pressed = 0;
       }
-      else{
-        up_pressed = 0;
-      }
+      else up_pressed = 0;
     
       if(digitalRead(DOWN_BUTTON) == LOW && digitalRead(UP_BUTTON) == HIGH) {
         down_pressed += 1;
         if(down_pressed == 15) option -= 1, down_pressed = 0;
       }
-      else{
-        down_pressed = 0;
-      }
+      else down_pressed = 0;
     
       if(option > 2) option = 0;
       if(option < 0) option = 2;
@@ -288,25 +262,19 @@ int set_hour(int current_hour, int current_minute){
     // Display Output.
     lcdprintTime(current_hour, current_minute, current_time.second(), b);
         
-    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
-      x += 1;
-    }
+    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW) x += 1;
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
       if(up_pressed == 15) current_hour += 1, up_pressed = 0;
     }
-    else{
-      up_pressed = 0;
-    }
+    else up_pressed = 0;
     
     if(digitalRead(DOWN_BUTTON) == LOW && digitalRead(UP_BUTTON) == HIGH) {
       down_pressed += 1;
       if(down_pressed == 15) current_hour -= 1, down_pressed = 0;
     }
-    else{
-      down_pressed = 0;
-    }
+    else down_pressed = 0;
     
     if(current_hour > 23) current_hour = 0;
     if(current_hour < 0) current_hour = 23;
@@ -330,25 +298,19 @@ int set_minute(int current_hour, int current_minute){
     
     lcdprintTime(current_hour, current_minute, current_time.second(), b);
     
-    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW){
-      x += 1;
-    }
+    if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == LOW) x += 1;
     
     if(digitalRead(UP_BUTTON) == LOW && digitalRead(DOWN_BUTTON) == HIGH) {
       up_pressed += 1;
       if(up_pressed == 15) current_minute += 1, up_pressed = 0;
     }
-    else{
-      up_pressed = 0;
-    }
+    else up_pressed = 0;
     
     if(digitalRead(DOWN_BUTTON) == LOW && digitalRead(UP_BUTTON) == HIGH) {
       down_pressed += 1;
       if(down_pressed == 15) current_minute -= 1, down_pressed = 0;
     }
-    else{
-      down_pressed = 0;
-    }
+    else down_pressed = 0;
     
     if(current_minute > 59) current_minute = 0;
     if(current_minute < 0) current_minute = 59;

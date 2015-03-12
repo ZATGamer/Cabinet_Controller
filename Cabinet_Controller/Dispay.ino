@@ -197,6 +197,11 @@ void cursorStart(){
   lcd.write(128);
 }
 
+void cursor2Start(){
+  lcd.write(254);
+  lcd.write(192);
+}
+
 void clearLCD(){
   lcd.write(0xFE);
   lcd.write(0x01);
@@ -227,4 +232,23 @@ void lcdprintSecond(int SS){
     lcd.print(SS);
   }
 }
-    
+
+
+
+int singleItem(int clear_screen, String item_name, int item_variable){
+  if(clear_screen == 1) clearLCD(), clear_screen = 0;
+  cursorStart();
+  lcd.print(item_name);
+  cursor2Start();
+  if(item_variable < 10) lcd.print(item_variable), lcd.print("  ");
+  if(item_variable >= 10 && item_variable < 100) lcd.print(item_variable), lcd.print(" ");
+  if(item_variable >= 100) lcd.print(item_variable);  
+  return clear_screen;
+}
+
+int itemName(int clear_screen, String item_name){
+  if(clear_screen == 1) clearLCD(), clear_screen = 0;
+  cursorStart();
+  lcd.print(item_name);
+  return clear_screen;
+}
